@@ -6,7 +6,6 @@ if 'BASE_URL' in os.environ:
     BASE_URL = os.environ['BASE_URL']
 else:
     BASE_URL = None
-import sys
 import time
 from tenacity import (
     retry,
@@ -14,8 +13,7 @@ from tenacity import (
     wait_random_exponential,
     wait_fixed
 )
-from utils import log_and_print_online
-sys.path.append(os.path.join(os.getcwd(),"ecl"))
+from ecl.utils import log_and_print_online
 
 class OpenAIEmbedding:
     def __init__(self, **params):

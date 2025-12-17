@@ -5,6 +5,7 @@ import os
 import shutil
 import time
 from datetime import datetime
+from pathlib import Path
 
 from camel.agents import RolePlaying
 from camel.configs import ChatGPTConfig
@@ -62,6 +63,10 @@ class ChatChain:
         self.recruitments = self.config["recruitments"]
         self.web_spider = self.config["web_spider"]
 
+        # Optionally skip manual phase to save tokens/cost when instructed via env
+        if os.environ.get("CHATDEV_SKIP_MANUAL", "0") == "1":
+            self.chain = [p for p in self.chain if str(p).lower() != "manual"]
+
         # init default max chat turn
         self.chat_turn_limit_default = 10
 
@@ -108,6 +113,10 @@ class ChatChain:
                                          model_type=self.model_type,
                                          log_filepath=self.log_filepath)
             self.phases[phase] = phase_instance
+
+    def _warehouse_root(self):
+        default_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "WareHouse")
+        return os.getenv("CHATDEV_WAREHOUSE_ROOT", default_root)
 
     def make_recruitment(self):
         """
@@ -177,10 +186,8 @@ class ChatChain:
         """
         start_time = now()
         filepath = os.path.dirname(__file__)
-        # root = "/".join(filepath.split("/")[:-1])
-        root = os.path.dirname(filepath)
-        # directory = root + "/WareHouse/"
-        directory = os.path.join(root, "WareHouse")
+        directory = self._warehouse_root()
+        os.makedirs(directory, exist_ok=True)
         log_filepath = os.path.join(directory,
                                     "{}.log".format("_".join([self.project_name, self.org_name, start_time])))
         return start_time, log_filepath
@@ -192,8 +199,8 @@ class ChatChain:
 
         """
         filepath = os.path.dirname(__file__)
-        root = os.path.dirname(filepath)
-        directory = os.path.join(root, "WareHouse")
+        directory = self._warehouse_root()
+        os.makedirs(directory, exist_ok=True)
 
         if self.chat_env.config.clear_structure:
             for filename in os.listdir(directory):
@@ -318,9 +325,13 @@ class ChatChain:
         logging.shutdown()
         time.sleep(1)
 
-        shutil.move(self.log_filepath,
-                    os.path.join(root + "/WareHouse", "_".join([self.project_name, self.org_name, self.start_time]),
-                                 os.path.basename(self.log_filepath)))
+        warehouse_root = Path(os.environ.get("CHATDEV_WAREHOUSE_ROOT", Path(self.config_path).resolve().parents[1] / "WareHouse"))
+        dest_dir = warehouse_root / "_".join([self.project_name, self.org_name, self.start_time])
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        if os.path.exists(self.log_filepath):
+            shutil.move(self.log_filepath, dest_dir / os.path.basename(self.log_filepath))
+        else:
+            log_visualize(f"Log file missing, skip move: {self.log_filepath}")
 
     # @staticmethod
     def self_task_improve(self, task_prompt):

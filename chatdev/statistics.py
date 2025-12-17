@@ -15,6 +15,7 @@ def prompt_cost(model_type: str, num_prompt_tokens: float, num_completion_tokens
         "gpt-4-turbo": 0.01,
         "gpt-4o": 0.005,
         "gpt-4o-mini": 0.00015,
+        "gpt-5-mini": 0.0003,
     }
 
     output_cost_map = {
@@ -28,6 +29,7 @@ def prompt_cost(model_type: str, num_prompt_tokens: float, num_completion_tokens
         "gpt-4-turbo": 0.03,
         "gpt-4o": 0.015,
         "gpt-4o-mini": 0.0006,
+        "gpt-5-mini": 0.0009,
     }
 
     if model_type not in input_cost_map or model_type not in output_cost_map:
@@ -102,6 +104,10 @@ def get_info(dir, log_filepath):
                 code_lines += len([line for line in lines if len(line.strip()) > 0])
         # print("code_lines:", code_lines)
 
+        if not os.path.exists(log_filepath):
+            # Log may be absent when runs short-circuit; return minimal stub instead of crashing.
+            return "{}"
+
         lines = open(log_filepath, "r", encoding="utf8").read().split("\n")
         sublines = [line for line in lines if "| **model_type** |" in line]
         if len(sublines) > 0:
@@ -119,6 +125,8 @@ def get_info(dir, log_filepath):
                 model_type = "gpt-4o"
             elif model_type == "GPT_4O_MINI":
                 model_type = "gpt-4o-mini"
+            elif model_type == "GPT_5_MINI":
+                model_type = "gpt-5-mini"
             # print("model_type:", model_type)
 
         lines = open(log_filepath, "r", encoding="utf8").read().split("\n")

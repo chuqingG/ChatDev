@@ -9,15 +9,16 @@ import time
 self_api_key = os.environ.get('OPENAI_API_KEY')
 BASE_URL = os.environ.get('BASE_URL')
 
-if BASE_URL:
-    client = openai.OpenAI(
-        api_key=self_api_key,
-        base_url=BASE_URL,
-    )
-else:
-    client = openai.OpenAI(
-        api_key=self_api_key
-    )
+
+def _get_client():
+    if not self_api_key:
+        return None
+    if BASE_URL:
+        return OpenAI(
+            api_key=self_api_key,
+            base_url=BASE_URL,
+        )
+    return OpenAI(api_key=self_api_key)
 
 def get_baidu_baike_content(keyword):
     # design api by the baidubaike
@@ -54,6 +55,9 @@ def get_wiki_content(keyword):
 
 def modal_trans(task_dsp):
     try:
+        client = _get_client()
+        if client is None:
+            return ''
         task_in ="'" + task_dsp + \
                "'Just give me the most important keyword about this sentence without explaining it and your answer should be only one keyword."
         messages = [{"role": "user", "content": task_in}]

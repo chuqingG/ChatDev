@@ -31,7 +31,7 @@ class Codes:
 
         if generated_content != "":
             regex = r"(.+?)\n```.*?\n(.*?)```"
-            matches = re.finditer(regex, self.generated_content, re.DOTALL)
+            matches = list(re.finditer(regex, self.generated_content, re.DOTALL))
             for match in matches:
                 code = match.group(2)
                 if "CODE" in code:
@@ -42,9 +42,16 @@ class Codes:
                     filename = "main.py"
                 if filename == "":  # post-processing
                     filename = extract_filename_from_code(code)
-                assert filename != ""
-                if filename is not None and code is not None and len(filename) > 0 and len(code) > 0:
+                if filename and code and len(filename) > 0 and len(code) > 0:
                     self.codebooks[filename] = self._format_code(code)
+
+            # Fallback: accept raw python function/code without fenced blocks or filenames
+            if len(self.codebooks) == 0 and "def " in generated_content:
+                stripped = generated_content.strip()
+                # remove surrounding fences if present
+                if stripped.startswith("```") and stripped.endswith("```"):
+                    stripped = "\n".join(stripped.splitlines()[1:-1])
+                self.codebooks["main.py"] = self._format_code(stripped)
 
     def _format_code(self, code):
         code = "\n".join([line for line in code.split("\n") if len(line.strip()) > 0])
